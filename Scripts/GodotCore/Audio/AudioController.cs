@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GodotCore {
@@ -64,15 +65,8 @@ namespace GodotCore {
                 m_JobTable = new Hashtable();
                 GenerateAudioTable();
             }
-            /*
-            private void CleanUp() {
-                if (m_JobTable != null) {
-                    foreach (DictionaryEntry _entry in m_JobTable) {
-                        Task _job = (Task) _entry.Value;
-                        _job.Dispose();
-                    }
-                }
-            }*/
+            
+    
             private void GenerateAudioTable() {
                 foreach (AudioTrack track in tracks) {
                     foreach (AudioObject obj in track.audio) {
@@ -111,14 +105,14 @@ namespace GodotCore {
 
 
                 if (_job.fade) {
-                    float _initialValue = _job.action == AudioAction.START || _job.action == AudioAction.RESTART ? -80.0f : 0.0f;
-                    float _targetValue = _initialValue == -80.0f ? 0 : -80;
+                    float _initialValue = _job.action == AudioAction.START || _job.action == AudioAction.RESTART ? -40.0f : 0.0f;
+                    float _targetValue = _initialValue == -40.0f ? 0 : -40.0f;
                     float durationInSeconds = 2.0f;
                     float _timer = 0.0f;
                     while (_timer <= durationInSeconds) {
                         _track.VolumeDb = Mathf.Lerp(_initialValue, _targetValue, _timer / durationInSeconds);
-                        _timer += (float)GetProcessDeltaTime();
-                        await Task.Delay(1);
+                        _timer += 0.01f;
+                        await Task.Delay(10);
                     }
                     if (_job.action == AudioAction.STOP) {
                         _track.Stop();
@@ -133,9 +127,14 @@ namespace GodotCore {
                 // remove conflicting jobs
                 RemoveConflictingJobs(_job.type);
 
+                CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
+                CancellationToken token = cancelTokenSource.Token;
+
                 // start job
-                Task jobRunner = RunAudioJob(_job);
-                m_JobTable.Add(_job.type, jobRunner);
+                Task jobTask = new Task(() => { RunAudioJob(_job); }, token) ;
+                jobTask.RunSynchronously();
+
+                m_JobTable.Add(_job.type, cancelTokenSource);
                 Log("Starting job on [" + _job.type + "] with the operation: " + _job.action);
             }
 
@@ -145,7 +144,9 @@ namespace GodotCore {
                     return;
                 }
 
-                Task runningJob = (Task) m_JobTable[_type];
+                CancellationTokenSource runningJob = (CancellationTokenSource) m_JobTable[_type];
+                runningJob.Cancel();
+                runningJob.Dispose();
                 m_JobTable.Remove(_type);
                 Log("Removed job of type "+ _type);
             }
