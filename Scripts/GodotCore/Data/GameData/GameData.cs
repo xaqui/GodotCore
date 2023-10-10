@@ -1,5 +1,7 @@
+using Godot;
+
 [System.Serializable]
-public class GameData {
+public partial class GameData : GodotObject {
 	
     public int counter;
 

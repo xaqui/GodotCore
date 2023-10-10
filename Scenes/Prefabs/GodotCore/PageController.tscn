@@ -92,7 +92,7 @@ text = "0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Counter" type="Node" parent="Menu/CenterContainer/VBoxContainer/L_counter" node_paths=PackedStringArray("lCounter")]
+[node name="Counter" type="Node" parent="Menu/CenterContainer/VBoxContainer/L_counter" node_paths=PackedStringArray("lCounter") groups=["data_persistance_objects"]]
 script = ExtResource("3_1mqh5")
 lCounter = NodePath("..")
 

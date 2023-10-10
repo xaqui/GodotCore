@@ -11,7 +11,6 @@ namespace GodotCore {
 
             [Export] private bool debug;
             private GameData gameData;
-            private List<IDataPersistance> dataPersistanceObjects;
 
             private FileDataHandler fileDataHandler;
 
@@ -41,20 +40,15 @@ namespace GodotCore {
                     NewGame();
                 }
                 // Push the loaded data to the other scripts
-                dataPersistanceObjects = FindAllDataPersistanceObjects();
-                foreach (IDataPersistance dataPersistanceObj in dataPersistanceObjects) {
-                    dataPersistanceObj.LoadData(gameData);
-                }
+
+                GetTree().CallGroup("data_persistance_objects", "LoadData", gameData);
                 Log(gameData.counter.ToString());
                 Log("Loaded Game Data.");
             }
 
             public void SaveGame() {
                 // Pass the data to other scripts so they can update it
-                dataPersistanceObjects = FindAllDataPersistanceObjects();
-                foreach (IDataPersistance dataPersistanceObj in dataPersistanceObjects) {
-                    dataPersistanceObj.SaveData(gameData);
-                }
+                GetTree().CallGroup("data_persistance_objects", "SaveData", gameData);
                 fileDataHandler.Save(gameData);
                 Log(gameData.counter.ToString());
                 Log("Saved Game Data.");
@@ -69,22 +63,9 @@ namespace GodotCore {
                 else {
                     QueueFree();
                 }
-                this.dataPersistanceObjects = FindAllDataPersistanceObjects();
                 this.fileDataHandler = new FileDataHandler(DATA_PATH, SAVE_FILENAME, useEncryption);
             }
 
-            private List<IDataPersistance> FindAllDataPersistanceObjects() {
-                List<IDataPersistance> dataPersistanceObjects = new List<IDataPersistance>();
-                // This is a bit hacky. I'm trying to use FindChildren(IDataPersistance) directly but returns an empty array
-                // This will do the trick, even if it is slightly less performant
-                Godot.Collections.Array<Node> dataPersistanceObjectsArray = GetTree().Root.FindChildren("*","Node",true,false);
-                foreach (Node child in dataPersistanceObjectsArray) {
-                    if (typeof(IDataPersistance).IsAssignableFrom(child.GetType())) {
-                        dataPersistanceObjects.Add(child as IDataPersistance);
-                    }
-                }
-                return new List<IDataPersistance>(dataPersistanceObjects);
-            }
             private void Log(string _msg) {
                 if (!debug) return;
                 GD.Print("[DataPersistanceController]: " + _msg);
